@@ -18,7 +18,7 @@ public class JpaMain {
             em.persist(team);
 
             Member member = new Member();
-            member.setUsername("TeamA");
+            member.setUsername("관리자");
             member.setAge(10);
             member.setTeam(team);
             member.setType(MemberType.ADMIN);
@@ -27,16 +27,13 @@ public class JpaMain {
             em.flush();
             em.clear();
 
-            //String query = "SELECT m.username, 'HELLO', true From Member m WHERE m.type = jpql.MemberType.USER";
-            String query = "SELECT m.username, 'HELLO', true From Member m WHERE m.type = :userType";
-            List<Object[]> result = em.createQuery(query)
-                    .setParameter("userType", MemberType.ADMIN) // 파라미터 바인딩
-                    .getResultList();
+            //String query = "SELECT COALESCE(m.username, '이름 없는 회원') FROM Member m";
+            String query = "SELECT NULLIF(m.username, '관리자') FROM Member m"; // 사용자 이름이 '관리자'이면 null, 나머지는 본인의 이름
 
-            for(Object[] o : result) {
-                System.out.println(o[0]);
-                System.out.println(o[1]);
-                System.out.println(o[2]);
+            List<String> resultList = em.createQuery(query, String.class).getResultList();
+
+            for(String s : resultList) {
+                System.out.println(s);
             }
 
             tx.commit();

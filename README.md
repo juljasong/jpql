@@ -158,6 +158,16 @@ tx.commit();
 ### CASE식
 - 기본 CASE식   
   ![img_1.png](img_1.png) 
+````java
+String query = "SELECT " +
+        "CASE WHEN m.age <= 10 THEN '학생요금'" +
+        "     WHEN m.age >= 60 THEN '경로요금'" +
+        "     ELSE '일반요금'" +
+        "     END " +
+        "     FROM Member m";
+
+List<String> resultList = em.createQuery(query, String.class).getResultList();
+````
 - 단순 CASE식   
   ![img_2.png](img_2.png)
 - COALESCE: 하나씩 조회해서 NULL 아니면 반환
