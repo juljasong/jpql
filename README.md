@@ -114,3 +114,28 @@ tx.commit();
    - ex) 회원의 이름과 팀의 이름이 같은 대상 외부 조인
    - JPQL: SELECT m, t FROM Member m LEFT JOIN Team t ON m.username = t.name
    - SQL: SELECT m.*, t.* FROM Member m LEFT JOIN Team t ON m.username = t.name
+
+# 서브 쿼리
+- 나이가 평균보다 많은 회원
+  - SELECT m FROM Member m WHERE m.age > (SELECT AVG(m2.age) FROM Member m2)
+- 한 건이라도 주문한 고객
+  - SELECT m FROM Member m WHERE (SELECT COUNT(o) FROM Order o WHERE m = o.member) > 0
+
+### 서브 쿼리 지원 함수
+- [NOT] EXISTS (sub query): 서브 쿼리에 결과가 존재하면 참
+- ex) 팀A 소속인 회원
+- SELECT m FROM Member m WHERE EXISTS (SELECT t FROM m.team t WHERE t.name = '팀A')
+  - {ALL|ANY|SOME} (sub query)
+  - ALL 모두 만족하면 참
+    - ex) 전체 상품 각각의 재고 보다 주문량이 많은 주문들
+    - SELECT o FROM Order o WHERE o.orderAmount > ALL (SELECT  p.stockAmout From Product p)
+  - ANY, SOME: 같은 의미, 조건을 하나라도 만족하면 참
+    - ex) 어떤 팀이든 팀에 소속된 회원
+    - SELECT m FROM Member m WHERE m.team = ANY (SELECT t FROM Team t)
+- [NOT] IN (sub query): 서브쿼리의 결과 중 하나라도 같은 것이 있으면 참
+
+### JPA 서브 쿼리의 한계
+- WHERE, HAVING 절에서만 서브 쿼리 사용 가능
+- SELECT절도 가능(하이버네이트 지원)
+- FROM절의 서브 쿼리는 현재 JPQL에서 불가능
+  - JOIN으로 풀 수 있으면 풀어서 해결
