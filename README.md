@@ -153,3 +153,17 @@ tx.commit();
   - AND, OR, NOT
   - =, >, >=, <, <=, <>
   - BETWEEN, LIKE, IS [NOT] NULL
+
+# 조건식
+### CASE식
+- 기본 CASE식   
+  ![img_1.png](img_1.png) 
+- 단순 CASE식   
+  ![img_2.png](img_2.png)
+- COALESCE: 하나씩 조회해서 NULL 아니면 반환
+  - ex) 사용자 이름 없으면 이름 없는 회원 반환
+  - SELECT COALESCE(m.username, '이름 없는 회원') FROM Member m
+- NULLIF: 두 값이 같으면 NULL 반환, 다르면 첫 번째 값 반환
+  - ex) 사용자 이름이 '관리자'면 NULL 반환하고 나머지는 본인 이름 반환
+  - SELECT NULLIF(m.username, '관리자') FROM Member m
+- 
