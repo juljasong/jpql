@@ -1,8 +1,6 @@
 package jpql;
 
 import javax.persistence.*;
-import java.util.Collection;
-import java.util.List;
 
 public class JpaMain {
     public static void main(String[] args) {
@@ -38,24 +36,21 @@ public class JpaMain {
             member3.setTeam(teamB);
             em.persist(member3);
 
-            em.flush();
-            em.clear();
 
-            //String query = "SELECT t FROM Team t JOIN FETCH t.members";
-            //String query = "SELECT DISTINCT t FROM Team t JOIN FETCH t.members";
-            String query = "SELECT t FROM Team t ";
-            List<Team> result = em.createQuery(query, Team.class)
-                    .setFirstResult(0)
-                    .setMaxResults(2)
-                    .getResultList();
 
-            for(Team o : result) {
-                System.out.println("===========================");
-                System.out.println(o.getName() + ", " + o.getMembers().size());
-                for(Member m : o.getMembers()) {
-                    System.out.println(m);
-                }
-            }
+            //FLUSH 자동 호출 <- commit, query, flush
+            int result = em.createQuery("UPDATE Member m set m.age = 20").executeUpdate();
+            System.out.println(result);
+
+            em.clear(); // 안하면 영속성 컨텍스트에 남아있는 값 때문에 제대로 동작 X
+
+            Member findMember1 = em.find(Member.class, member1.getId());
+            Member findMember2 = em.find(Member.class, member2.getId());
+            Member findMember3 = em.find(Member.class, member3.getId());
+
+            System.out.println(findMember1.getAge());
+            System.out.println(findMember2.getAge());
+            System.out.println(findMember3.getAge());
 
             tx.commit();
             //code

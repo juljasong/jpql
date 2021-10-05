@@ -326,3 +326,114 @@ or
     @OneToMany(mappedBy = "team")
     private List<Member> members = new ArrayList<>();
 ````
+
+# 다형성 쿼리
+### TYPE
+- 조회 대상을 특정 자식으로 한정
+- ex) Item 중에 Book, Movie를 조회하라
+  - JPQL: SELECT i FROM ITEM i WHERE type(i) IN (Book, Movie)
+  - SQL: SELECT i FROM ITEM i WHERE i.DTYPE IN ('B', 'M')
+
+### TREAT
+- 자바의 타입 캐스팅과 유사
+- 상속 구조에서 부모 타입을 특정 자식 타입으로 다룰 때 사용
+- FROM, WHERE, SELECT(하이버네이트 지원) 사용
+- ex) 부모인 Item과 자식 Book이 있음
+  - JPQL: SELECT i FROM ITEM i WHERE TREAT(i as Book).auther = 'Kim'
+  - SQL: SELECT i.* FROM ITEM i WHERE i.DTYPE = 'B' and i.auther = 'Kim'
+
+# 엔티티 직접 사용
+### 기본키 값
+- JPQL에서 엔티티를 직접 사용하면 SQL에서 해당 엔티티의 기본키 값을 사용
+  - JPQL: SELECT COUNT(m.id) FROM Member m // 엔티티의 아이디 사용
+          SELECT COUNT(m) FROM Member m //엔티티를 직접 사용
+  - SQL:  SELECT COUNT(m.id) AS cnt FROM Member m
+
+````java
+String jpql = "SELECT m FROM Member m WHERE m = :member";
+List result = em.createQuery(jpql)
+                .setParameter("member", member).getResultList();
+
+String jpql = "SELECT m FROM Member m WHERE m.id = :memberId";
+List result = em.createQuery(jpql)
+                .setParameter("memberId", memberId).getResultList();
+````
+
+### 외래키 값
+````java
+Team team = em.find(Team.class, 1L);
+
+String query = "SELECT m FROM Member m WHERE m.team = :team";
+List result = em.createQuery(query)
+        .setParameter("team", team).getResultList();
+
+Team team = em.find(Team.class, 1L);
+
+String query = "SELECT m FROM Member m WHERE m.team.id = :teamId";
+List result = em.createQuery(query)
+        .setParameter("team", teamId).getResultList();
+````
+
+### Named 쿼리
+- 미리 정의해서 이름 부여해두고 사용하는 JPQL
+- 정적 쿼리
+- 어노테이션, XML에 정의(XML이 항상 우선권 가짐)
+- 애플리케이션 로딩 시점에 초기화 후 재사용 -> 캐싱되어 있음
+- 애플리케이션 로딩 시점에 쿼리 검증
+- 애플리케이션 운영 환경에 따라 다른 XML 배포 가능
+
+##### 어노테이션
+````java
+@Entity
+@NamedQuery(
+        name = "Member.findByUsername",
+        query = "SELECT m FROM Member m WHERE m.username = :username" )
+public class Member {
+...
+````
+##### XML
+persistence.xml
+````xml
+<persistence-unit name="ex1">
+    <mapping-file>META-INF/ormMember.xml</mapping-file>
+````
+ormMember.xml
+````xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<entity-mappings xmlns="http://xmlns.jcp.org/xml/ns/persistence/orm" version="2.2">
+    <named-query name="Member.findByUsername">
+        <query><![CDATA[
+        SELECT m
+        FROM Member m
+        WHERE m.username = :username
+        ]]></query>
+    </named-query>
+    <named-query name="Member.count">
+        <query>
+            SELECT COUNT(m)
+            FROM Member m
+        </query>
+    </named-query>
+</entity-mappings>
+````
+````java
+List<Member> result = em.createNamedQuery("Member.findByUsername", Member.class)
+        .setParameter("username", "회원1")
+        .getResultList();
+````
+
+# 벌크 연산 (UPDATE, DELETE)
+- 재고가 10개 미만인 모든 상품의 가격을 10% 상승하려면?
+- JPA 변경 감지 기능으로 실행하려면 너무 많은 SQL 실행
+  1. 재고가 10개 미만인 상품을 리스트로 조회
+  2. 상품 엔티티의 가격을 10% 증가
+  3. 트랜잭션 커밋 시점에 변경 감지 동작
+- 변경된 데이터가 100건이라면 100번의 UPDATE SQL 실행
+- 쿼리 한 번으로 여러 테이블 로우 변경(엔티티)
+- executeUpdate()의 결과는 영향받은 엔티티 수 반환
+- UPDATE, DELETE 지원
+- 주의
+  - 영속성 컨텍스트 무시하고 DB에 직접 쿼리
+    - 벌크 연산 먼저 실행
+    - 벌크 연산 수행 후 영속성 컨텍스트 초기화
+- @Modifying
