@@ -242,3 +242,87 @@ List<String> resultList = em.createQuery(query, String.class).getResultList();
 - 가급적 묵시적 조인 대신 명시적 조인 사용
 - 조인은 SQL 튜닝에 중요 포인트
 - 묵시적 조인은 조인이 일어나는 상황을 한눈에 파악하기 어려움
+
+# fetch join
+- SQL조인 종류 X
+- JPQL에서 성능 최적화를 위해 제공하는 기능
+- 연관된 엔티티나 컬렉션을 SQL 한 번에 함께 조회하는 기능
+- JOIN FETCH 명령어 사용
+- 페치 조인 ::= [ LEFT [OUTER]|INNER ] JOIN FETCH 조인 경로
+
+### 엔티티 페치 조인
+- 회원을 조회하면서 연관된 팀 함께 조회(SQL 한 번에)
+- JPQL: SELECT m FROM Member m JOIN FETCH m.team
+- SQL: SELECT M.*, T.* FROM MEMBER M INNER JOIN TEAM T ON M.TEAM_ID=T.ID
+
+### 컬렉션 페치 조인
+- 일대다 관계, 컬렉션 페치 조인
+- JPQL: SELECT t
+        FROM Team t JOIN FETCH t.members
+        WHERE t.name = '팀A'
+- SQL: SELECT T.*, M.*
+       FROM TEAM T
+       INNER JOIN MEMBER M ON T.ID = M.TEAM_ID
+       WHERE T.NAME = '팀A'
+- DISTINCT
+  - SQL의 DISTINCT는 중복 결과를 제거하는 명령
+  - JPQL의 DISTINCT는
+    1. SQL에 DISTINCT 추가
+    2. 애플리케이션에서 엔티티 중복 제거
+    - SELECT DISTINCT t FROM Team t JOIN FETCH t.members
+      - SQL에 DISTINCT 추가하지만 데이터가 다르므로 SQL 결과에서 중복 제거 실패
+      - DISTINCT가 추가로 애플리케이션에서 중복 제거 시도
+      - 같은 식별자를 가진 Team 엔티티 제거 
+
+### 페치 조인 vs 일반 조인
+- 일반 조인 실행 시 연관 엔티티 함께 조회 X
+  - JPQL : SELECT t
+           FROM Team t 
+           JOIN t.members m
+           WHERE t.name = '팀A'
+  - SQL : SELECT T.*
+          FROM TEAM T
+          INNER JOIN MEMBER M ON T.ID = M.TEAM_ID
+          WHERE T.NAME = '팀A'
+  - JPQL은 결과 반환 시 연관관계 고려 X
+    - 단지 SELECT 절에 지정한 엔티티 조회할 뿐
+    - 여기서는 Team 엔티티만 조회하고, 회원 엔티티 조회 X
+  - 페치 조인을 사용할 때만 연관된 엔티티도 함께 조회(즉시 로딩)
+  - 페치 조인은 객체 그래프를 SQL 한 번에 조회하는 개념
+    - JPQL : SELECT t
+             FROM Team t
+             JOIN FETCH t.members 
+             WHERE t.name = '팀A'
+    - SQL : SELECT T.*, M.*
+            FROM TEAM T
+            INNER JOIN MEMBER M ON T.ID = M.TEAM_ID
+            WHERE T.NAME = '팀A'
+
+### 페치 조인의 특징과 한계
+- 페치 조인 대상에는 별칭 줄 수 없음
+  - 하이버네이트는 가능하나 가급적 사용 X
+- 둘 이상의 컬렉션은 페치 조인 불가
+- 컬렉션을 페치 조인하면 페이징 API(setFirstResult, setMaxResults) 사용 불가
+  - 일대일, 다대일 같은 단일 값 연관 필드들은 페치 조인해도 페이징 가능
+  - 하이버네이트는 경고 로그를 남기고 메모리에서 페이징(위험)
+    - WARN: HHH000104: firstResult/maxResults specified with collection fetch; applying in memory!
+- 연관된 엔티티들을 SQL 한 번으로 조회 - 성능 최적화
+- 엔티티에 직접 적용하는 글로벌 로딩 전략 보다 우선함
+  - @OneToMany(fetch = FetchType.LAZY)
+- 실무에서 글로벌 로딩 전략은 모두 지연 로딩
+- 최적화가 필요한 곳은 페치 조인 적용
+- 모든 것을 페치 조인으로 해결할 수는 없음
+- 페치 조인은 객체 그래프를 유지할 때 사용하면 효과적
+- 여러 테이블을 조인해서 엔티티가 가진 모양이 아닌 전혀 다른 결과를 내야 하면, 페치 조인 보다는 일반 조인을 사용하고 필요한 데이터들만 조회하여 DTO로 반환하는 것이 효과적
+- 
+
+### @BatchSize
+````
+<property name="hibernate.default_batch_fetch_size" value="100" />
+````
+or
+````java
+    //@BatchSize(size = 100) // Team 가져올 때 한꺼번에 보낼 수 있는 Team 개수
+    @OneToMany(mappedBy = "team")
+    private List<Member> members = new ArrayList<>();
+````

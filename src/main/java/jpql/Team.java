@@ -1,5 +1,7 @@
 package jpql;
 
+import org.hibernate.annotations.BatchSize;
+
 import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,6 +13,7 @@ public class Team {
     private Long id;
     private String name;
 
+    //@BatchSize(size = 100) // Team 가져올 때 한꺼번에 보낼 수 있는 Team 개수
     @OneToMany(mappedBy = "team")
     private List<Member> members = new ArrayList<>();
 

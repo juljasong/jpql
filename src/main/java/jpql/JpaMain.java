@@ -15,27 +15,46 @@ public class JpaMain {
         try {
             //code
 
-            Team team = new Team();
-            em.persist(team);
+            Team teamA = new Team();
+            teamA.setName("TeamA");
+            em.persist(teamA);
+
+            Team teamB = new Team();
+            teamB.setName("teamB");
+            em.persist(teamB);
 
             Member member1 = new Member();
-            member1.setUsername("관리자1");
-            member1.setTeam(team);
+            member1.setUsername("회원1");
+            member1.setTeam(teamA);
             em.persist(member1);
 
             Member member2 = new Member();
-            member2.setUsername("관리자2");
-            member2.setTeam(team);
+            member2.setUsername("회원2");
+            member2.setTeam(teamA);
             em.persist(member2);
+
+            Member member3 = new Member();
+            member3.setUsername("회원3");
+            member3.setTeam(teamB);
+            em.persist(member3);
 
             em.flush();
             em.clear();
 
-            String query = "SELECT m.username FROM Team t JOIN t.members m";
-            List<String> resultList = em.createQuery(query, String.class).getResultList();
+            //String query = "SELECT t FROM Team t JOIN FETCH t.members";
+            //String query = "SELECT DISTINCT t FROM Team t JOIN FETCH t.members";
+            String query = "SELECT t FROM Team t ";
+            List<Team> result = em.createQuery(query, Team.class)
+                    .setFirstResult(0)
+                    .setMaxResults(2)
+                    .getResultList();
 
-            for(String s : resultList) {
-                System.out.println(s);
+            for(Team o : result) {
+                System.out.println("===========================");
+                System.out.println(o.getName() + ", " + o.getMembers().size());
+                for(Member m : o.getMembers()) {
+                    System.out.println(m);
+                }
             }
 
             tx.commit();
