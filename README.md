@@ -176,4 +176,69 @@ List<String> resultList = em.createQuery(query, String.class).getResultList();
 - NULLIF: 두 값이 같으면 NULL 반환, 다르면 첫 번째 값 반환
   - ex) 사용자 이름이 '관리자'면 NULL 반환하고 나머지는 본인 이름 반환
   - SELECT NULLIF(m.username, '관리자') FROM Member m
-- 
+
+# JPQL 함수
+### JPQL 기본 함수
+- CONCAT
+- SUBSTRING
+- TRIM
+- LOWER, UPPER
+- LENGTH
+- LOCATE
+- ABS, SQRT, MOD
+- SIZE, INDEX(JPA 용도)
+
+### 사용자 정의 함수 호출
+- 하이버네이트는 사용 전 방언에 추가해야 함
+  - 사용하는 DB 방언 상속받고, 사용자 정의 함수를 등록
+  ````java
+  public class MyH2Dialect extends H2Dialect {
+    public MyH2Dialect() {
+        registerFunction("group_concat", new StandardSQLFunction("group_concat", StandardBasicTypes.STRING));
+    }
+  }
+  ````
+  - persistence.xml
+  ````
+  <property name="hibernate.dialect" value="dialect.MyH2Dialect"/>
+  ````
+  - main.java
+  ````java
+  //String query = "SELECT FUNCTION('group_concat', m.username) FROM Member m";
+  String query = "SELECT group_concat(m.username) FROM Member m";
+  List<String> resultList = em.createQuery(query, String.class).getResultList();
+  for(String s : resultList) { System.out.println(s); }
+  tx.commit();
+  ````
+  
+# 20211005_경로 표현식
+- .(점)을 찍어 객체 그래프를 탐색하는 것
+![img_3.png](img_3.png)
+- 상태 필드(state field): 단순히 값을 저장하기 위한 필드
+- 단일 값 연관 필드(association field): 연관관계를 위한 필드
+  - 단일값 연관 필드: @ManyToOne, @OneToOne, 대상이 엔티티(ex: m.team)
+  - 컬렉션 값 연관 필드: @OneToMany, @ManyToMany, 대상이 컬렉션(ex: m.orders)
+- 컬렉션 값 연관 필드
+
+### 경로 표현식 특징
+- 상태 필드(state field): 경로 탐색의 끝, 탐색 X
+- 단일값 연관 경로: 묵시적 내부 조인(inner join) 발생, 탐색 O
+- 컬렉션 값 연관 경로: 묵시적 내부 조인 발생, 탐색 X
+  - FROM절에서 명시적 조인을 통해 별칭을 얻으면 별칭을 통해 탐색 가능
+- 실무에서 묵시적 조인은 사용하지 않는 것이 좋다..
+
+### 명시적 조인
+- JOIN 키워드 직접 사용
+  - SELECT m FROM Member m JOIN m.team t
+
+### 묵시적 조인
+- 경로 표현식에 의해 묵시적으로 SQL 조인 발생(내부 조인만 가능)
+  - SELECT m.team FROM Member m
+
+### 경로 탐색을 사용한 묵시적 조인 시 주의사항
+- 항상 내부 조인
+- 컬렉션은 경로 탐색의 끝, 명시적 조인을 통해 별칭을 얻어야 함
+- 경로 탐색은 주로 SELECT, WHERE 절에서 사용하지만 묵시적 조인으로 인해 SQL의 FROM (JOIN) 절에 영향을 줌
+- 가급적 묵시적 조인 대신 명시적 조인 사용
+- 조인은 SQL 튜닝에 중요 포인트
+- 묵시적 조인은 조인이 일어나는 상황을 한눈에 파악하기 어려움

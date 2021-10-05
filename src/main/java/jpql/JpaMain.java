@@ -1,6 +1,7 @@
 package jpql;
 
 import javax.persistence.*;
+import java.util.Collection;
 import java.util.List;
 
 public class JpaMain {
@@ -13,23 +14,24 @@ public class JpaMain {
 
         try {
             //code
+
             Team team = new Team();
-            team.setName("TeamA");
             em.persist(team);
 
-            Member member = new Member();
-            member.setUsername("관리자");
-            member.setAge(10);
-            member.setTeam(team);
-            member.setType(MemberType.ADMIN);
-            em.persist(member);
+            Member member1 = new Member();
+            member1.setUsername("관리자1");
+            member1.setTeam(team);
+            em.persist(member1);
+
+            Member member2 = new Member();
+            member2.setUsername("관리자2");
+            member2.setTeam(team);
+            em.persist(member2);
 
             em.flush();
             em.clear();
 
-            //String query = "SELECT COALESCE(m.username, '이름 없는 회원') FROM Member m";
-            String query = "SELECT NULLIF(m.username, '관리자') FROM Member m"; // 사용자 이름이 '관리자'이면 null, 나머지는 본인의 이름
-
+            String query = "SELECT m.username FROM Team t JOIN t.members m";
             List<String> resultList = em.createQuery(query, String.class).getResultList();
 
             for(String s : resultList) {
